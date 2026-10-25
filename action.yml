@@ -1,0 +1,51 @@
+name: "saysOK deploy"
+description: "Send a deploy to saysOK so it shows on your monitors' charts and incidents."
+branding:
+  icon: "upload-cloud"
+  color: "green"
+inputs:
+  url:
+    description: "The Deploy API URL from saysOK (Integrations, Deploy API)."
+    required: true
+  token:
+    description: "The Deploy API token. Keep it in a repository secret."
+    required: true
+  environment:
+    description: "Where the deploy went."
+    required: false
+    default: "production"
+  status:
+    description: "success or failed. GitHub's failure and cancelled count as failed, so the job's status can be passed as it is."
+    required: false
+    default: "success"
+  title:
+    description: "A short title. Defaults to the head commit's message, else the workflow name."
+    required: false
+    default: ""
+  id:
+    description: "The deploy's own id. Defaults to the run, attempt and job, so each job's deploy is its own."
+    required: false
+    default: ""
+  fail-on-error:
+    description: "Fail the step when saysOK cannot record the deploy."
+    required: false
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: "$GITHUB_ACTION_PATH/post.sh"
+      env:
+        SAYSOK_URL: ${{ inputs.url }}
+        SAYSOK_TOKEN: ${{ inputs.token }}
+        SAYSOK_ENVIRONMENT: ${{ inputs.environment }}
+        SAYSOK_STATUS: ${{ inputs.status }}
+        SAYSOK_TITLE: ${{ inputs.title }}
+        SAYSOK_FAIL_ON_ERROR: ${{ inputs.fail-on-error }}
+        SAYSOK_SHA: ${{ github.sha }}
+        SAYSOK_REF: ${{ github.ref_name }}
+        SAYSOK_ACTOR: ${{ github.actor }}
+        SAYSOK_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        # run_id-run_attempt-job-jobindex: strategy.job-index is in every job (0 without a matrix), so matrix jobs differ too.
+        SAYSOK_ID: ${{ inputs.id || format('{0}-{1}-{2}-{3}', github.run_id, github.run_attempt, github.job, strategy.job-index) }}
+        SAYSOK_DEFAULT_TITLE: ${{ github.event.head_commit.message || github.workflow }}
